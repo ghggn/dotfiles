@@ -1,18 +1,5 @@
 #!/bin/bash
 
-# ==============================================================================
-# UFW Bulk Rule Deletion Script
-# Description: A script to safely delete multiple UFW rules at once.
-# Author:      AI Assistant
-# Version:     1.1
-#
-# Usage:
-#   ./ufw-bulk-delete.sh          # Interactively delete ALL rules.
-#   ./ufw-bulk-delete.sh <filter> # Interactively delete rules matching a filter.
-#   e.g., ./ufw-bulk-delete.sh 80/tcp
-#   e.g., ./ufw-bulk-delete.sh 192.168.1.100
-# ==============================================================================
-
 # --- Safety Check: Must be run as root ---
 if [ "$(id -u)" -ne 0 ]; then
    echo "This script must be run as root. Please use sudo." >&2
@@ -29,10 +16,10 @@ get_rules_to_delete() {
         # awk extracts the rule number (e.g., "[1]")
         # sed removes the brackets
         # sort -rn sorts them in reverse numerical order (critical!)
-        ufw status numbered | grep -i "$FILTER" | awk '{print $1}' | sed 's/\[//g;s/\]//g' | sort -rn
+        ufw status numbered | grep -P "$FILTER" | grep -o -P '^\[[0-9 ]+\]' | sed -r 's/\[|\]| //g' | sort -rn
     else
         # If no filter, get all rule numbers
-        ufw status numbered | awk '/\[[0-9]+\]/ {print $1}' | sed 's/\[//g;s/\]//g' | sort -rn
+        ufw status numbered | grep -o -P '^\[[0-9 ]+\]' | sed -r 's/\[|\]| //g' | sort -rn
     fi
 }
 
@@ -58,7 +45,7 @@ echo "-------------------------------------------------------------"
 
 # Display the actual rules that will be deleted for user confirmation
 # The complex grep pattern matches lines starting with the exact rule numbers
-EGREP_PATTERN="^\[($(echo "$RULE_NUMBERS" | tr '\n' '|' | sed 's/|$//'))\]"
+EGREP_PATTERN="^\[ ?($(echo "$RULE_NUMBERS" | tr '\n' '|' | sed 's/|$//'))\]"
 ufw status numbered | grep -E "$EGREP_PATTERN"
 
 echo "-------------------------------------------------------------"
